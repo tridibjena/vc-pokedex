@@ -1,0 +1,29 @@
+# Secrets — glob so backups and variants can never slip through
+.env
+.env.*
+!.env.example
+*.bak
+*.key
+*.pem
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+venv/
+.venv/
+
+# Application data
+data/
+chroma_db/
+
+# Node
+node_modules/
+dashboard/dist/
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/

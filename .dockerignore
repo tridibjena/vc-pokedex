@@ -1,0 +1,16 @@
+.env
+.env.local
+.git/
+.gitignore
+venv/
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+data/
+chroma_db/
+node_modules/
+dashboard/node_modules/
+dashboard/dist/
+.DS_Store
+tests/
