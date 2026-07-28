@@ -613,6 +613,244 @@ body {
   color: var(--text-primary);
 }
 
+/* ── Chat rail tabs ───────────────────────────────────────────────────────── */
+
+.rail-tabs {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 14px;
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.rail-tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 10px;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  cursor: pointer;
+  color: var(--text-muted);
+  font-family: var(--font-heading);
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+
+.rail-tab:hover {
+  color: var(--text-secondary);
+}
+
+.rail-tab.active {
+  color: var(--violet-light);
+  border-bottom-color: var(--violet);
+}
+
+.rail-tab-action {
+  margin-left: auto;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-muted);
+  padding: 6px;
+  display: flex;
+  align-items: center;
+}
+
+.rail-tab-action:hover {
+  color: var(--status-critical, #d03b3b);
+}
+
+/* ── Sources (uploaded reference documents) ───────────────────────────────── */
+
+.sources-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.sources-actions {
+  flex-shrink: 0;
+}
+
+.sources-upload-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 10px;
+  background: var(--violet-soft);
+  border: 1px dashed var(--border-focus);
+  border-radius: var(--radius-sm);
+  color: var(--violet-light);
+  font-family: var(--font-heading);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.sources-upload-btn:hover {
+  background: rgba(131, 21, 249, 0.2);
+  border-color: var(--violet);
+}
+
+.sources-hint {
+  margin-top: 6px;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.sources-error {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 8px 10px;
+  background: rgba(208, 59, 59, 0.1);
+  border-left: 2px solid #d03b3b;
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  font-size: 0.74rem;
+  line-height: 1.45;
+  color: #f0a0a0;
+  flex-shrink: 0;
+}
+
+.sources-error svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.sources-label {
+  font-family: var(--font-heading);
+  font-size: 0.68rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.sources-select {
+  width: 100%;
+  padding: 8px 10px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 0.76rem;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.sources-select:focus {
+  outline: none;
+  border-color: var(--border-focus);
+}
+
+.sources-list {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-height: 0;
+}
+
+.source-item {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 9px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  font-size: 0.75rem;
+}
+
+.source-item-static {
+  background: none;
+  border-style: dashed;
+  color: var(--text-muted);
+}
+
+.source-icon {
+  flex-shrink: 0;
+  color: var(--text-muted);
+}
+
+.source-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-secondary);
+}
+
+.source-meta {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  color: var(--text-muted);
+}
+
+.source-meta-ok {
+  color: #0ca30c;
+}
+
+.source-meta-failed {
+  color: #d03b3b;
+  cursor: help;
+}
+
+.source-remove {
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-muted);
+  padding: 2px;
+  display: flex;
+  opacity: 0;
+  transition: opacity 0.15s ease, color 0.15s ease;
+}
+
+.source-item:hover .source-remove {
+  opacity: 1;
+}
+
+/* Keyboard users never trigger :hover, so the control must appear on focus. */
+.source-remove:focus-visible {
+  opacity: 1;
+  color: #d03b3b;
+}
+
+.source-remove:hover {
+  color: #d03b3b;
+}
+
+.sources-empty {
+  padding: 12px 4px;
+  font-size: 0.75rem;
+  line-height: 1.5;
+  color: var(--text-muted);
+  text-align: center;
+}
+
 /* ── Deal browser ─────────────────────────────────────────────────────────── */
 
 .deal-grid {

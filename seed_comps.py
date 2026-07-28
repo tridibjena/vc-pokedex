@@ -240,6 +240,10 @@ def seed() -> int:
 
 if __name__ == "__main__":
     from config.settings import settings
+    from tools.chroma_guard import ensure_exclusive_access
+
+    # Writing to Chroma under a live server leaves it with a stale index.
+    ensure_exclusive_access(force="--allow-running-api" in sys.argv)
 
     if not (settings.gemini_api_key or os.environ.get("GEMINI_API_KEY")):
         logger.error(

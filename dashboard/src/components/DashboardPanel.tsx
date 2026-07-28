@@ -97,10 +97,10 @@ export default function DashboardPanel() {
   ]
 
   const steps = [
-    <>Go to <strong>Document Ingest</strong> and upload a pitch deck PDF or paste a report URL.</>,
-    <>The agents extract metrics, retrieve comparable deals, and screen for risk in parallel.</>,
-    <>Open <strong>Deal Browser</strong> for the scorecard, or <strong>Investment Memos</strong> for the write-up.</>,
-    <>Use <strong>RAG Chat</strong> to interrogate any indexed document directly.</>,
+    <>Type a startup's name in <strong>The Dex</strong> — no upload, no data entry.</>,
+    <>The agents research it on the web, retrieve comparable deals, and screen for risk in parallel.</>,
+    <>Open <strong>The Dex</strong> for the scorecard, or <strong>Investment Memos</strong> for the write-up.</>,
+    <>Use <strong>RAG Chat</strong> to interrogate any entry — or upload your own documents under <strong>Sources</strong>.</>,
   ]
 
   return (

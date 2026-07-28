@@ -13,6 +13,11 @@ rank-bm25>=0.2.2
 # ── Web scraping ─────────────────────────────────────────────────────
 beautifulsoup4>=4.12.0
 
+# ── Document extraction ──────────────────────────────────────────────
+# pdfplumber (MIT) rather than PyMuPDF (AGPL-3.0), which this MIT repo
+# cannot depend on.
+pdfplumber>=0.11.0
+
 # ── Storage ──────────────────────────────────────────────────────────
 motor>=3.5.0
 

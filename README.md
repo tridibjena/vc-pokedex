@@ -124,8 +124,16 @@ cd dashboard && npm install && npm run build && cd ..
 
 docker compose up -d          # MongoDB + Mongo Express
 python seed_edgar.py          # 232 real comps from SEC Form D
+python seed_library.py        # 6 sample VC documents for RAG chat
 uvicorn api.main:app --port 8000
 ```
+
+> **Seed before you start the server, not after.** ChromaDB's `PersistentClient`
+> is a single-process embedded store. Writing to it while uvicorn is live leaves
+> the running server with a stale index — sometimes a hard
+> `InternalError: Error finding id` that 500s every chat request, sometimes just
+> silently fewer retrieval results. The seed scripts detect a live server and
+> refuse; pass `--allow-running-api` to override, and restart afterwards.
 
 Open **http://localhost:8000**. The API serves the built dashboard; you only need
 Vite (`cd dashboard && npm run dev`) when editing frontend code.
@@ -185,9 +193,31 @@ browser's print pipeline: real selectable text, working page breaks, no bundle c
 
 ![Memo](docs/memo.png)
 
-Also: a live funding **wire** across the top, **RAG chat** grounded on any scanned
-dossier, recent **news** per company, and founder names linking out to their
-search results.
+**RAG chat with your own documents** — every Dex entry is searchable, and you
+can add your own reference material under **Sources**: term sheets, data-room
+exports, LP updates, market reports. PDF, TXT and MD, up to 50 MB. Scope a
+question to one document or ask across everything.
+
+Uploads go to a **library** kept deliberately separate from the Dex. A Dex entry
+is a company the agents researched and scored; a library document is source
+material you brought yourself. Both are chunked into the same Chroma collection
+so chat can reach either, but a term sheet does not become a company sitting in
+the Dex waiting for a scorecard it will never get.
+
+Six sample documents ship in [`samples/`](samples/) — three pitch decks, a term
+sheet, a diligence checklist and an LP letter — so chat has something to answer
+from before you upload anything:
+
+```bash
+python seed_library.py
+```
+
+Every company in them is fictional. Real decks are confidential or copyrighted,
+and the ones that circulate publicly are a decade stale. These are written to be
+internally consistent instead, so answers can be checked by hand.
+
+Also: a live funding **wire** across the top, recent **news** per company, and
+founder names linking out to their search results.
 
 ---
 
@@ -211,9 +241,11 @@ and labelled as inferred. See [SEEDING.md](SEEDING.md).
 Two deliberately separate ChromaDB collections:
 
 - `vc_comps` — the Form D benchmark corpus
-- `vc_documents` — dossiers of scanned companies
+- `vc_documents` — dossiers of scanned companies, plus uploaded library documents
 
-Mixing them means a scanned company returns as its own "comparable deal."
+Mixing them means a scanned company returns as its own "comparable deal." Note
+which side uploads land on: they are searchable by chat, and never used as a
+benchmark. Nothing you upload can move a scorecard.
 
 Each query runs a dense leg (Gemini embeddings) and a sparse leg (BM25), fuses
 them with RRF, then **re-orders the fetched rows by RRF rank** — Chroma's
@@ -237,7 +269,10 @@ directly discards the ranking entirely.
 | `GET` | `/reports/deals/{id}/memo` | The investment memo |
 | `GET` | `/reports/deals/{id}/news` | Recent coverage |
 | `GET` | `/reports/trends` | Sector / stage / monthly aggregates |
-| `POST` | `/chat` · `/chat/stream` | RAG chat, optionally scoped to one dossier |
+| `POST` | `/library/documents` | **Upload a reference document.** `202`; indexing runs in the background. |
+| `GET` | `/library/documents` | Uploaded documents, with indexing status |
+| `DELETE` | `/library/documents/{file_id}` | Remove a document and its chunks |
+| `POST` | `/chat` · `/chat/stream` | RAG chat, optionally scoped to one `file_id` |
 | `GET` | `/health` | Service status — never calls the LLM |
 
 Interactive docs at `/docs`.
@@ -268,7 +303,7 @@ rather than a guess.
 ## Testing
 
 ```bash
-pytest -q                        # 104 tests, no network calls
+pytest -q                        # 136 tests, no network calls
 cd dashboard && npm run build    # tsc + vite
 ```
 
@@ -308,14 +343,16 @@ per-category rainbow would be decoration rather than encoding.
 ## Project layout
 
 ```
-agents/       LangGraph nodes — one file per agent, plus orchestrator.py
-tools/        LLM client, providers, vector store, Mongo, calculator, search, EDGAR
-api/          FastAPI app, schemas, routes
-pipelines/    Research and analysis orchestration
-dashboard/    Vite + React SPA
-tests/        pytest suite
-seed_edgar.py Real comps from SEC Form D
-seed_comps.py Synthetic fallback for offline demos
+agents/         LangGraph nodes — one file per agent, plus orchestrator.py
+tools/          LLM client, providers, vector store, Mongo, calculator, search, EDGAR
+api/            FastAPI app, schemas, routes
+pipelines/      Research and analysis orchestration
+dashboard/      Vite + React SPA
+samples/        Six synthetic VC documents for RAG chat
+tests/          pytest suite
+seed_edgar.py   Real comps from SEC Form D
+seed_comps.py   Synthetic fallback for offline demos
+seed_library.py Sample documents into the RAG chat library
 ```
 
 ## License

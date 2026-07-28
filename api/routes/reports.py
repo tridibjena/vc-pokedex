@@ -177,7 +177,7 @@ async def generate_report_endpoint(request: ReportRequest):
     if not deal:
         raise HTTPException(
             status_code=404,
-            detail=f"No deal record found for '{request.company_name}'. Upload a pitch deck first.",
+            detail=f"No deal record found for '{request.company_name}'. Scan it first via POST /research.",
         )
 
     file_id = deal.get("file_id")

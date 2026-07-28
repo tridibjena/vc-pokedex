@@ -151,7 +151,50 @@ def rrf(dense_ids: list[str], sparse_ids: list[str], k: int = 60) -> list[str]:
     return sorted(scores, key=lambda i: scores[i], reverse=True)
 
 
+def _reopen(collection):
+    """Drop cached state and re-acquire a collection handle.
+
+    Rebinds the module-level handle too. Returning a fresh handle for the
+    current call only would leave the stale one in place, so every subsequent
+    query would pay a failure before retrying.
+    """
+    global comps_col, docs_col, col
+
+    _invalidate(collection.name)
+    fresh = client.get_collection(collection.name)
+
+    if collection.name == COMPS_COLLECTION:
+        comps_col = fresh
+        col = fresh  # keep the health-check alias pointing at the live handle
+    elif collection.name == DOCS_COLLECTION:
+        docs_col = fresh
+
+    return fresh
+
+
 def _hybrid_query(collection, text: str, n: int, filter_dict: dict | None) -> list[dict]:
+    """Hybrid search with one retry against a stale index.
+
+    If another process writes to the Chroma directory while this one is live
+    (a seed script run against a running server), the dense leg can raise
+    `InternalError: Error finding id` for every subsequent query, which 500s
+    chat until the process restarts. The seed scripts refuse to run in that
+    situation (tools/chroma_guard.py), but --allow-running-api exists and a
+    permanently broken chat is a bad outcome for a recoverable condition, so
+    retry once against a fresh handle before giving up.
+    """
+    try:
+        return _hybrid_query_once(collection, text, n, filter_dict)
+    except Exception as exc:
+        logger.warning(f"Query on '{collection.name}' failed ({exc}); retrying with a fresh handle.")
+        try:
+            return _hybrid_query_once(_reopen(collection), text, n, filter_dict)
+        except Exception as retry_exc:
+            logger.error(f"Query on '{collection.name}' failed after reopen: {retry_exc}")
+            return []
+
+
+def _hybrid_query_once(collection, text: str, n: int, filter_dict: dict | None) -> list[dict]:
     logger.info(f"Querying '{collection.name}': '{text[:80]}' (n={n}, filter={filter_dict})")
 
     index = _get_bm25(collection)

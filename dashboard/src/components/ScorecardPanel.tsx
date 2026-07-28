@@ -117,7 +117,7 @@ export default function ScorecardPanel() {
         <Layers size={44} strokeWidth={1} color="var(--text-muted)" />
         <h3 style={{ marginTop: '16px', fontWeight: 600 }}>The Dex is empty</h3>
         <p style={{ color: 'var(--text-muted)', marginTop: '8px', fontSize: '0.9rem' }}>
-          Upload a pitch deck in <strong>Document Ingest</strong> to register your first entry.
+          Scan a startup by name above to register your first entry.
         </p>
       </div>
     )

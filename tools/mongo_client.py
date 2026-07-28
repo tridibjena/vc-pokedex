@@ -73,6 +73,8 @@ class MongoDBClient:
             await db.deals.create_index("stage")
             await db.documents.create_index("file_id")
             await db.documents.create_index([("ingested_at", -1)])
+            await db.library.create_index("file_id", unique=True)
+            await db.library.create_index([("uploaded_at", -1)])
             await db.reports.create_index("deal_id")
             await db.reports.create_index([("created_at", -1)])
             await db.agent_memory.create_index([("session_id", 1), ("timestamp", 1)])
@@ -164,6 +166,36 @@ class MongoDBClient:
         except Exception as exc:
             logger.error(f"Failed to delete document {doc_id}: {exc}")
             return False
+
+    # ── Library (uploaded reference documents) ────────────────────────────
+    # A separate collection from `documents` on purpose. `documents` backs the
+    # Dex grid, where every row without a deal renders as a pending silhouette;
+    # a term sheet filed here is reference material for chat, not a company
+    # awaiting a score, and would otherwise sit in the Dex scanning forever.
+
+    async def save_library_doc(self, record: dict) -> str:
+        record["uploaded_at"] = _now()
+        result = await db.library.insert_one(record)
+        logger.info(f"Saved library document: {record.get('filename')}")
+        return str(result.inserted_id)
+
+    async def list_library_docs(self, limit: int = 200) -> list[dict]:
+        cursor = db.library.find({}).sort("uploaded_at", -1).limit(limit)
+        return [_serialize(doc) async for doc in cursor]
+
+    async def get_library_doc(self, file_id: str) -> dict | None:
+        return _serialize(await db.library.find_one({"file_id": file_id}))
+
+    async def set_library_status(
+        self, file_id: str, status: str, error: str | None = None, **extra
+    ) -> None:
+        update = {"status": status, "updated_at": _now(), **extra}
+        update["error"] = error  # cleared on success, so a retry looks clean
+        await db.library.update_one({"file_id": file_id}, {"$set": update})
+
+    async def delete_library_doc(self, file_id: str) -> bool:
+        result = await db.library.delete_one({"file_id": file_id})
+        return result.deleted_count > 0
 
     # ── Agent Memory ──────────────────────────────────────────────────────
     async def save_agent_memory(self, session_id: str, memory_data: dict) -> None:

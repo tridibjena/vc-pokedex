@@ -7,13 +7,16 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from loguru import logger
 
-from api.routes import chat, reports, research
+from api.routes import chat, library, reports, research
 from api.schemas import HealthResponse
 from config.settings import settings
 from tools.mongo_client import mongo_client
 
 DIST_DIR = Path("dashboard/dist")
-API_PREFIXES = ("chat", "reports", "research", "health", "docs", "redoc", "openapi.json")
+API_PREFIXES = (
+    "chat", "reports", "research", "library",
+    "health", "docs", "redoc", "openapi.json",
+)
 
 
 @asynccontextmanager
@@ -55,6 +58,7 @@ app.add_middleware(
 app.include_router(chat.router)
 app.include_router(reports.router)
 app.include_router(research.router)
+app.include_router(library.router)
 
 
 @app.get("/health", response_model=HealthResponse)

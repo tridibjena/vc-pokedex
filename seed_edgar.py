@@ -22,6 +22,7 @@ import httpx
 from loguru import logger
 
 from config.settings import settings
+from tools.chroma_guard import ensure_exclusive_access
 from tools.edgar import DATASET_URL, extract_comps, recent_quarters
 from tools.vector_store import comps_col, upsert_comps
 
@@ -71,7 +72,13 @@ def main() -> int:
     ap.add_argument("--q", type=int, default=1, help="latest quarter to start from")
     ap.add_argument("--dry-run", action="store_true", help="parse only; no embeddings, no writes")
     ap.add_argument("--force", action="store_true", help="re-download even if cached")
+    ap.add_argument("--allow-running-api", action="store_true",
+                    help="seed even if the API server is running (leaves it stale)")
     args = ap.parse_args()
+
+    # Writing to Chroma under a live server leaves it with a stale index.
+    if not args.dry_run:
+        ensure_exclusive_access(force=args.allow_running_api)
 
     quarters = recent_quarters(args.quarters, args.year, args.q)
     logger.info(f"Quarters: {', '.join(quarters)}")
