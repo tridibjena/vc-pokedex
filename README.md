@@ -198,11 +198,25 @@ can add your own reference material under **Sources**: term sheets, data-room
 exports, LP updates, market reports. PDF, TXT and MD, up to 50 MB. Scope a
 question to one document or ask across everything.
 
+![RAG chat](docs/chat.png)
+
+Answers cite what they were built from. The **Activity** tab traces the retrieval
+as it happens — vector query, dense + sparse BM25 fusion, how many chunks came
+back and how many were actually cited — so a wrong answer can be read back to the
+chunk that caused it.
+
 Uploads go to a **library** kept deliberately separate from the Dex. A Dex entry
 is a company the agents researched and scored; a library document is source
 material you brought yourself. Both are chunked into the same Chroma collection
 so chat can reach either, but a term sheet does not become a company sitting in
 the Dex waiting for a scorecard it will never get.
+
+![Sources](docs/library.png)
+
+The **Sources** tab is the upload surface and the scope selector in one: each
+document shows its indexed chunk count once embedding finishes, the Dex sits at
+the bottom as a single collapsed entry, and the dropdown narrows a question to
+any one of them.
 
 Six sample documents ship in [`samples/`](samples/) — three pitch decks, a term
 sheet, a diligence checklist and an LP letter — so chat has something to answer
