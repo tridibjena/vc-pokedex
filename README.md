@@ -183,6 +183,15 @@ pacing on a paid plan.
 
 ## Features
 
+**The Dex** — every company you scan lands as a numbered record. The sector sits
+in a coloured *type badge* with the label always beside the swatch, so identity
+never rides on hue alone, and the five dimension scores render as a compact
+equalizer: height-encoded columns instead of five labelled bars, with the numbers
+still on hover. A scan still in flight shows as a silhouette marked `scanning…`
+rather than an empty slot, so the grid never lies about what it knows yet.
+
+![The Dex](docs/dex.png)
+
 **Firm Watch** — recent investments by ten of the largest global funds, with a
 `LED` badge separating rounds a firm led from ones it merely joined.
 
