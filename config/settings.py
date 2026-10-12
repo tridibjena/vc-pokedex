@@ -93,6 +93,15 @@ class Settings(BaseSettings):
     tavily_timeout_s: int = 15
     sec_user_agent: str = "VCPokedex contact@example.com"
 
+    # ── Geocoding (the Dex map) ──────────────────
+    # Nominatim / OpenStreetMap: free and keyless, but its usage policy requires
+    # an identifying User-Agent and at most one request per second. Results are
+    # cached in Mongo, so each HQ is looked up once. Set false to run offline.
+    geocoding_enabled: bool = True
+    geocoder_url: str = "https://nominatim.openstreetmap.org/search"
+    geocoder_user_agent: str = "VCPokedex/1.0 (self-hosted VC deal analysis)"
+    geocoder_timeout_s: int = 10
+
     @property
     def model_chain(self) -> list[str]:
         """Primary model first, then quota fallbacks, de-duplicated."""

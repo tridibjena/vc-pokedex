@@ -1,3 +1,4 @@
+import asyncio
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -31,7 +32,14 @@ async def lifespan(app: FastAPI):
     logger.info(f"Embeddings: {settings.gemini_embed_model}")
     logger.info(f"MongoDB: {settings.mongodb_url} | Chroma: {settings.chroma_persist_dir}")
     logger.info(f"CORS origins: {settings.cors_origin_list}")
+
+    # Pin deals scanned before the map existed. Paced at Nominatim's 1 req/s,
+    # so it runs behind the server rather than delaying startup.
+    from tools.geocode import backfill_quietly
+
+    backfill = asyncio.create_task(backfill_quietly())
     yield
+    backfill.cancel()
     logger.info("VC Pokedex backend shutting down.")
 
 

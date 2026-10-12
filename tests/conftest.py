@@ -168,7 +168,7 @@ class _Aio:
 def _offline_and_unthrottled(monkeypatch):
     """Keep the suite offline and fast.
 
-    Two things would otherwise reach the network or sleep:
+    Three things would otherwise reach the network or sleep:
 
     1. Rate limiting — the free tier allows 5 generate requests/minute, so the
        real limiter would make the graph tests sleep for minutes against a faked
@@ -179,11 +179,16 @@ def _offline_and_unthrottled(monkeypatch):
        exercise OpenRouter opt back in explicitly.
     """
     import tools.llm_client as llm
+    from config.settings import settings
     from tools import openrouter
 
     monkeypatch.setattr(llm._generate_limiter, "per_minute", 0, raising=False)
     monkeypatch.setattr(llm._embed_limiter, "per_minute", 0, raising=False)
     monkeypatch.setattr(openrouter, "is_configured", lambda: False)
+    # 3. Geocoding — Nominatim is a live service, and the app's startup backfill
+    #    would otherwise reach for it (and Mongo) in every TestClient lifespan.
+    #    Tests that exercise the geocoder opt back in explicitly.
+    monkeypatch.setattr(settings, "geocoding_enabled", False)
 
 
 @pytest.fixture

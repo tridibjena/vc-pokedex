@@ -3,6 +3,7 @@ import time
 from loguru import logger
 
 from agents.orchestrator import orchestrator
+from tools.geocode import geo_update, locate
 from tools.mongo_client import db, mongo_client
 
 
@@ -45,6 +46,14 @@ class AnalysisPipeline:
                 "metadata": meta,
                 "file_id": file_id,
             }
+
+            # Pin the HQ for the map. Never allowed to fail the analysis: if the
+            # geocoder is down, the deal is left unchecked and the startup
+            # backfill picks it up later.
+            try:
+                deal_data.update(geo_update(await locate(meta)))
+            except Exception as exc:
+                logger.warning(f"[AnalysisPipeline] Geocoding skipped for '{resolved_name}': {exc}")
 
             # Key the upsert on file_id, not company_name: re-analyzing the same
             # file should update its deal, while two different uploads that both

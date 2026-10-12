@@ -27,6 +27,40 @@ def _dimension_scores(scorecard: dict | None) -> dict | None:
     return out or None
 
 
+def _strings(value, limit: int = 3) -> list[str]:
+    return [s for s in (value or []) if isinstance(s, str) and s.strip()][:limit]
+
+
+def _deal_card(d: dict) -> DealCard:
+    """Flatten a stored deal into what one Dex card and map pin need."""
+    meta = d.get("metadata") or {}
+    scorecard = d.get("scorecard") or {}
+    geo = d.get("geo") or {}
+    return DealCard(
+        deal_id=d.get("_id"),
+        company_name=d.get("company_name") or "Unknown Startup",
+        sector=d.get("sector") or "Unknown",
+        stage=d.get("stage") or "Unknown",
+        round_size=meta.get("round_size"),
+        lead_investor=meta.get("lead_investor"),
+        overall_score=d.get("overall_score"),
+        recommendation=d.get("recommendation"),
+        created_at=d.get("created_at") or datetime.now(timezone.utc),
+        file_id=d.get("file_id"),
+        scores=_dimension_scores(scorecard),
+        last_round=meta.get("last_round"),
+        round_amount=meta.get("last_round_amount"),
+        valuation=meta.get("valuation"),
+        hq_location=meta.get("hq_location"),
+        lat=geo.get("lat"),
+        lng=geo.get("lng"),
+        geo_precision=geo.get("precision"),
+        product=meta.get("product_description") or None,
+        strengths=_strings(scorecard.get("key_strengths")),
+        risks=_strings(scorecard.get("key_risks")),
+    )
+
+
 # NOTE: the literal paths below MUST stay declared before "/{report_id}",
 # otherwise that catch-all swallows /deals, /list and /trends.
 
@@ -49,25 +83,7 @@ async def list_deals_endpoint(
         deals = await mongo_client.list_deals(filter_dict, limit=limit, skip=skip)
         total = await mongo_client.count_deals(filter_dict)
 
-        formatted = [
-            DealCard(
-                deal_id=d.get("_id"),
-                company_name=d.get("company_name") or "Unknown Startup",
-                sector=d.get("sector") or "Unknown",
-                stage=d.get("stage") or "Unknown",
-                round_size=(d.get("metadata") or {}).get("round_size"),
-                lead_investor=(d.get("metadata") or {}).get("lead_investor"),
-                overall_score=d.get("overall_score"),
-                recommendation=d.get("recommendation"),
-                created_at=d.get("created_at") or datetime.now(timezone.utc),
-                file_id=d.get("file_id"),
-                scores=_dimension_scores(d.get("scorecard")),
-                last_round=(d.get("metadata") or {}).get("last_round"),
-                round_amount=(d.get("metadata") or {}).get("last_round_amount"),
-                valuation=(d.get("metadata") or {}).get("valuation"),
-            )
-            for d in deals
-        ]
+        formatted = [_deal_card(d) for d in deals]
         return DealsListResponse(deals=formatted, total=total)
     except Exception as exc:
         logger.exception(f"Failed to list deals: {exc}")

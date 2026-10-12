@@ -12,7 +12,9 @@ PROMPT = """Extract from this research dossier:
 
 Return JSON with keys:
 company_name, sector, stage (pre-seed/seed/series-a/series-b/growth),
-founding_year, founders (list of full names), hq_location,
+founding_year, founders (list of full names),
+hq_location (headquarters as "City, Region, Country"),
+hq_address (street address of the headquarters if a source states one, else null),
 arr (number or null), burn_monthly (number or null),
 cash (number or null), headcount (number or null),
 revenue (number or null), cogs (number or null), prev_arr (number or null),
@@ -61,6 +63,9 @@ async def ingest_node(state: dict) -> dict:
         "founding_year": parsed.get("founding_year"),
         "founders": parsed.get("founders", []),
         "hq_location": parsed.get("hq_location") or "Unknown",
+        # Only when a source states it — it is what lets the map pin the building
+        # rather than the city centre.
+        "hq_address": parsed.get("hq_address"),
         "product_description": parsed.get("product_description", ""),
         "target_market": parsed.get("target_market", ""),
         "business_model": parsed.get("business_model", ""),

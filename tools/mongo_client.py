@@ -147,6 +147,13 @@ class MongoDBClient:
         )
         return _serialize(doc)
 
+    async def get_file_statuses(self, file_ids: list[str]) -> dict[str, dict]:
+        """{file_id: {"status", "error"}} for many jobs in one round-trip."""
+        if not file_ids:
+            return {}
+        cursor = db.files.find({"_id": {"$in": file_ids}}, {"status": 1, "error": 1})
+        return {doc["_id"]: doc async for doc in cursor}
+
     # ── Documents (metadata) ──────────────────────────────────────────────
     async def save_document_metadata(self, metadata: dict) -> str:
         metadata["ingested_at"] = _now()

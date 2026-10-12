@@ -106,6 +106,16 @@ class DealCard(BaseModel):
     last_round: Optional[str] = None
     round_amount: Optional[float] = None
     valuation: Optional[float] = None
+    # Where the map pins it. `geo_precision` says whether the pin is the
+    # building ("address") or only the city centre ("city", "region", ...).
+    hq_location: Optional[str] = None
+    lat: Optional[float] = None
+    lng: Optional[float] = None
+    geo_precision: Optional[str] = None
+    # What the list card shows: the one-liner, and the case for and against.
+    product: Optional[str] = None
+    strengths: list[str] = Field(default_factory=list)
+    risks: list[str] = Field(default_factory=list)
 
 
 class DealsListResponse(BaseModel):

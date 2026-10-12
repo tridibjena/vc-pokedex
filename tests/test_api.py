@@ -192,3 +192,40 @@ class TestHealthCost:
 
         assert fake_gemini.generate_calls == [], "health check made a generate() call"
         assert fake_gemini.embed_calls == [], "health check made an embed() call"
+
+
+class TestDexEntryStatus:
+    """/research/documents must say whether each scan is running or failed.
+
+    Without it the Dex drew every document lacking a deal as "scanning…" —
+    including scans that had failed — and could never stop polling them.
+    """
+
+    def test_documents_carry_their_job_status(self, monkeypatch):
+        from fastapi.testclient import TestClient
+
+        import api.routes.research as research
+        from api.main import app
+
+        class FakeMongo:
+            async def list_documents(self, limit=100):
+                return [
+                    {"_id": "1", "file_id": "f-run", "company_name": "Runner"},
+                    {"_id": "2", "file_id": "f-bad", "company_name": "Broken"},
+                    {"_id": "3", "company_name": "Legacy"},
+                ]
+
+            async def get_file_statuses(self, ids):
+                assert ids == ["f-run", "f-bad"]
+                return {
+                    "f-run": {"_id": "f-run", "status": "processing"},
+                    "f-bad": {"_id": "f-bad", "status": "failed", "error": "LLM quota"},
+                }
+
+        monkeypatch.setattr(research, "mongo_client", FakeMongo())
+        docs = TestClient(app).get("/research/documents").json()["documents"]
+
+        by_name = {d["company_name"]: d for d in docs}
+        assert by_name["Runner"]["status"] == "processing"
+        assert (by_name["Broken"]["status"], by_name["Broken"]["error"]) == ("failed", "LLM quota")
+        assert by_name["Legacy"]["status"] is None, "no job record means nothing in flight"

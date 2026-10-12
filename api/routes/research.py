@@ -1,3 +1,5 @@
+import asyncio
+
 from fastapi import APIRouter, BackgroundTasks, HTTPException
 from loguru import logger
 
@@ -97,9 +99,22 @@ async def research_status_endpoint(file_id: str):
 
 @router.get("/documents")
 async def list_documents_endpoint():
-    """Every registered dex entry, including ones still being analyzed."""
+    """Every registered dex entry, including ones still being analyzed.
+
+    Each carries its job status, so the Dex can tell a scan in flight from one
+    that failed — otherwise a failed scan sits as "scanning…" forever.
+    """
     try:
         documents = await mongo_client.list_documents()
+        statuses = await mongo_client.get_file_statuses(
+            [d["file_id"] for d in documents if d.get("file_id")]
+        )
+        for d in documents:
+            job = statuses.get(d.get("file_id")) or {}
+            # None when there is no job record at all (entries older than the
+            # status field) — nothing is in flight, so the Dex must not poll it.
+            d["status"] = job.get("status")
+            d["error"] = job.get("error")
         return {"documents": documents, "total": len(documents)}
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc))
@@ -119,7 +134,7 @@ async def delete_document_endpoint(doc_id: str):
     file_id = doc_record.get("file_id")
     if file_id:
         try:
-            delete_by_file_id(file_id)
+            await asyncio.to_thread(delete_by_file_id, file_id)
         except Exception as exc:
             logger.error(f"Failed to delete chunks: {exc}")
 
