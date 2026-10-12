@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
+import { FileText, RefreshCw } from 'lucide-react'
 import { api } from '../api'
 import MemoDocument from './MemoDocument'
-import { FileText, Calendar, Compass, RefreshCw } from 'lucide-react'
 
 export default function MemoPanel() {
   const [reports, setReports] = useState<any[]>([])
@@ -47,104 +47,72 @@ export default function MemoPanel() {
 
   if (loadingList) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '40vh' }}>
-        <div className="loading-spinner" />
+      <div className="panel-loading panel-loading-tall">
+        <span className="spinner" />
       </div>
     )
   }
 
   return (
-    <div className="split-layout">
-      {/* Sidebar List */}
-      <div className="glass-card" style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-        <div style={{ padding: '16px', borderBottom: '1px solid rgba(255,255,255,0.05)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span style={{ fontWeight: 600, fontSize: '0.95rem' }}>Screened Startups</span>
-          <button onClick={fetchReports} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}>
-            <RefreshCw size={14} />
+    <div className="memo-layout">
+      <nav className="comic-card memo-index" aria-label="Memos">
+        <div className="memo-index-head">
+          <span className="section-title">Screened startups</span>
+          <button onClick={fetchReports} className="btn btn-sm btn-icon" title="Refresh" aria-label="Refresh memos">
+            <RefreshCw size={13} />
           </button>
         </div>
-        
-        <div style={{ flexGrow: 1, overflowY: 'auto', padding: '8px' }}>
-          {reports.length === 0 ? (
-            <p style={{ textAlign: 'center', padding: '24px', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-              No memos compiled yet.
-            </p>
-          ) : (
-            reports.map((report) => (
-              <div
-                key={report._id}
-                onClick={() => setSelectedReportId(report._id)}
-                className={`deal-row-item ${selectedReportId === report._id ? 'active' : ''}`}
-                style={{
-                  padding: '12px',
-                  borderRadius: 'var(--radius-sm)',
-                  cursor: 'pointer',
-                  marginBottom: '6px',
-                  transition: 'background 0.2s',
-                  background: selectedReportId === report._id ? 'rgba(255,255,255,0.05)' : 'transparent'
-                }}
-              >
-                <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-                  <FileText size={16} color={selectedReportId === report._id ? '#8b5cf6' : 'var(--text-muted)'} />
-                  <div style={{ overflow: 'hidden' }}>
-                    <p style={{ fontWeight: 600, fontSize: '0.85rem', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', color: selectedReportId === report._id ? 'var(--text-primary)' : 'var(--text-secondary)' }}>
-                      {report.company_name}
-                    </p>
-                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                      {report.created_at ? new Date(report.created_at).toLocaleDateString() : 'N/A'}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-      </div>
 
-      {/* Memo Contents */}
-      <div className="glass-card" style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        {reports.length === 0 ? (
+          <p className="memo-index-empty">No memos written yet.</p>
+        ) : (
+          <ul className="memo-index-list">
+            {reports.map((report) => (
+              <li key={report._id}>
+                <button
+                  type="button"
+                  className="memo-index-item"
+                  aria-current={selectedReportId === report._id ? 'true' : undefined}
+                  onClick={() => setSelectedReportId(report._id)}
+                >
+                  <span className="memo-index-name">{report.company_name}</span>
+                  <span className="memo-index-date">
+                    {report.created_at ? new Date(report.created_at).toLocaleDateString() : 'N/A'}
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </nav>
+
+      <section className="comic-card memo-reader">
         {loadingReport ? (
-          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
-            <div className="loading-spinner" />
+          <div className="panel-loading">
+            <span className="spinner" />
           </div>
         ) : selectedReport ? (
-          <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-            {/* Header info */}
-            <div style={{ padding: '20px', borderBottom: '1px solid rgba(255,255,255,0.05)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div>
-                <h1 style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-                  Investment Memo: {selectedReport.company_name}
-                </h1>
-                <div style={{ display: 'flex', gap: '16px', marginTop: '6px', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    <Calendar size={12} />
-                    {new Date(selectedReport.created_at).toLocaleDateString()}
-                  </span>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    <Compass size={12} />
-                    Report Ref: {selectedReport._id.substring(0, 8)}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Markdown Text Area */}
-            <div style={{ flexGrow: 1, overflowY: 'auto', padding: '20px 24px 32px' }}>
-              <MemoDocument
-                content={selectedReport.content}
-                companyName={selectedReport.company_name}
-                createdAt={selectedReport.created_at}
-                bare
-              />
-            </div>
-          </div>
+          <>
+            <header className="memo-reader-head">
+              <h2 className="memo-reader-title">{selectedReport.company_name}</h2>
+              <p className="memo-reader-meta">
+                {new Date(selectedReport.created_at).toLocaleDateString()} · ref {selectedReport._id.substring(0, 8)}
+              </p>
+            </header>
+            <MemoDocument
+              content={selectedReport.content}
+              companyName={selectedReport.company_name}
+              createdAt={selectedReport.created_at}
+              bare
+            />
+          </>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100%', color: 'var(--text-muted)', gap: '12px' }}>
-            <FileText size={48} strokeWidth={1} />
-            <p>Select a startup to read its Investment Memo.</p>
+          <div className="empty-card empty-card-flat">
+            <FileText size={36} strokeWidth={2} aria-hidden="true" />
+            <p>Select a startup to read its investment memo.</p>
           </div>
         )}
-      </div>
+      </section>
     </div>
   )
 }

@@ -36,13 +36,13 @@ export default function MemoDocument({ content, companyName, createdAt, bare }: 
     <div className="memo-block">
       <div className="memo-toolbar">
         {!bare && (
-          <h3 className="card-title" style={{ margin: 0 }}>
-            <FileText size={13} style={{ verticalAlign: '-2px', marginRight: 6 }} />
-            Investment Memo
+          <h3 className="section-title">
+            <FileText size={14} aria-hidden="true" />
+            Investment memo
           </h3>
         )}
-        <button className="btn-ghost" onClick={exportPdf} title="Save as PDF">
-          <Download size={13} style={{ verticalAlign: '-2px', marginRight: 6 }} />
+        <button className="btn btn-sm" onClick={exportPdf} title="Save as PDF">
+          <Download size={13} aria-hidden="true" />
           Export PDF
         </button>
       </div>
@@ -57,7 +57,7 @@ export default function MemoDocument({ content, companyName, createdAt, bare }: 
           </div>
         </div>
 
-        <div dangerouslySetInnerHTML={{ __html: renderMarkdown(content) }} />
+        <div className="md" dangerouslySetInnerHTML={{ __html: renderMarkdown(content) }} />
       </div>
     </div>
   )

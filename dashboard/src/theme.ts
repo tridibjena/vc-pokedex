@@ -1,103 +1,79 @@
 /**
- * Chart + status tokens.
+ * Comic design tokens for charts, pins and verdicts.
  *
- * The categorical order is not cosmetic — it is the CVD-safety mechanism.
- * Validated against the dark chart surface (#0e0e11) with the palette validator:
- *
- *   adjacent pairs : CVD ΔE 9.4 (deutan) / 8.7 (tritan), normal-vision ΔE 19.3
- *   all pairs      : passes for the FIRST FOUR slots only
- *
- * Slots 5+ fail all-pairs (yellow vs orange, normal-vision ΔE 10.6), so any
- * chart that shows every series at once — the sector donut — caps at four and
- * folds the rest into "Other". Do not extend or re-order without re-running:
- *
- *   node scripts/validate_palette.js "<hexes>" --mode dark --surface "#0e0e11"
+ * The page palette — cream canvas, ink lines, hard offset shadows — lives in
+ * style.css as CSS variables. These are the same values for the places CSS
+ * can't reach: Recharts props and MapLibre paint properties.
  */
-export const SERIES = [
-  '#8315f9', // 1 violet  (brand)
-  '#199e70', // 2 aqua
-  '#d95926', // 3 orange
-  '#3987e5', // 4 blue
-  '#c98500', // 5 yellow  — adjacent-safe only
-  '#d55181', // 6 magenta — adjacent-safe only
-] as const
-
-/** Max distinct hues in a chart where all series are visible simultaneously. */
-export const ALL_PAIRS_CAP = 4
-
-/** Neutral for the folded "Other" bucket — never one of the categorical hues. */
-export const OTHER_COLOR = '#6b6b76'
-
-/** Reserved status colors. Never reused as a series, always with icon + label. */
-export const STATUS = {
-  good: '#0ca30c',
-  warning: '#fab219',
-  serious: '#ec835a',
-  critical: '#d03b3b',
-} as const
-
-/** Chart chrome. */
-export const CHART = {
-  surface: '#0e0e11',
-  grid: 'rgba(255,255,255,0.07)',
-  axis: '#6b6b76',
-  textPrimary: '#fafafa',
-  textSecondary: '#a1a1aa',
-} as const
-
-/** Shared Recharts tooltip styling so every chart reads as one system. */
-export const tooltipStyle = {
-  backgroundColor: '#141417',
-  border: '1px solid rgba(255,255,255,0.13)',
-  borderRadius: '7px',
-  color: CHART.textPrimary,
-  fontSize: '0.8rem',
-  boxShadow: '0 8px 24px -8px rgba(0,0,0,0.8)',
-} as const
-
-export const tooltipItemStyle = { color: CHART.textSecondary } as const
-export const tooltipLabelStyle = { color: CHART.textPrimary, fontWeight: 600 } as const
+export const INK = '#161713'
+export const PAPER = '#fffaf0'
+export const CANVAS = '#f3ead5'
+export const POP = '#ffd928'
+export const PINK = '#ff5f91'
+export const CYAN = '#5dd9e7'
+export const MUTED = '#dfd5bf'
+export const MUTED_INK = '#5e5b52'
 
 /**
- * Fold a categorical distribution down to the all-pairs-safe cap.
- * Keeps the largest buckets and sums the tail into a neutral "Other".
+ * Verdict colours — the one categorical encoding on the map (pin fill).
+ *
+ * Blue for INVEST rather than the conventional green: green and red collapse
+ * under deuteranopia (ΔE 3.0), which is exactly the pair a reader most needs to
+ * tell apart. Validated with the dataviz palette validator against the canvas:
+ *
+ *   node validate_palette.js "#2378c9,#e0a100,#d8345f" --mode light \
+ *     --surface "#f3ead5" --pairs all
+ *   → CVD worst ΔE 16.9 (protan), normal-vision worst ΔE 26.1
+ *
+ * Amber is below 3:1 against the canvas, so a verdict colour never stands
+ * alone: every pin has an ink outline and its score printed inside, every badge
+ * carries the verdict word, and the map has a legend.
  */
-export function foldToCap<T extends { name: string; value: number }>(
-  rows: T[],
-  cap: number = ALL_PAIRS_CAP,
-): Array<{ name: string; value: number; color: string }> {
-  const sorted = [...rows].sort((a, b) => b.value - a.value)
-  const head = sorted.slice(0, cap).map((r, i) => ({ ...r, color: SERIES[i] }))
-  const tail = sorted.slice(cap)
-  if (tail.length === 0) return head
+export const VERDICT = {
+  INVEST: '#2378c9',
+  CONSIDER: '#e0a100',
+  PASS: '#d8345f',
+} as const
 
-  return [
-    ...head,
-    {
-      name: `Other (${tail.length})`,
-      value: tail.reduce((sum, r) => sum + r.value, 0),
-      color: OTHER_COLOR,
-    },
-  ]
+/** Text that sits on a verdict fill — chosen per fill for contrast. */
+export const VERDICT_TEXT: Record<keyof typeof VERDICT, string> = {
+  INVEST: PAPER,
+  CONSIDER: INK,
+  PASS: PAPER,
 }
 
-/** Score colour thresholds, shared by the deal list, radar and score bars. */
+export const UNSCORED = '#a39a85'
+
+/** Chart chrome. Marks are ink-outlined, so their fill is decoration, not contrast. */
+export const CHART = {
+  surface: PAPER,
+  grid: 'rgba(22, 23, 19, 0.14)',
+  axis: MUTED_INK,
+  textPrimary: INK,
+  textSecondary: MUTED_INK,
+  /** The single-series fill. One colour: the axis already carries identity. */
+  series: CYAN,
+  seriesStroke: INK,
+} as const
+
+/** Shared Recharts tooltip — a paper card with an ink border and offset shadow. */
+export const tooltipStyle = {
+  backgroundColor: PAPER,
+  border: `2px solid ${INK}`,
+  borderRadius: 0,
+  color: INK,
+  fontSize: '0.8rem',
+  fontFamily: 'var(--mono-face)',
+  boxShadow: `3px 3px 0 ${INK}`,
+} as const
+
+export const tooltipItemStyle = { color: INK, fontWeight: 700 } as const
+export const tooltipLabelStyle = { color: INK, fontWeight: 900, textTransform: 'uppercase' } as const
+
+/** Dimension-score colour, on the same three steps as the verdicts. */
 export function scoreColor(score: number | null | undefined): string {
-  if (score == null) return CHART.axis
-  if (score >= 7) return STATUS.good
-  if (score >= 5) return STATUS.warning
-  return STATUS.critical
-}
-
-export function recommendationColor(rec: string | null | undefined): string {
-  switch ((rec ?? '').toUpperCase()) {
-    case 'INVEST':
-      return STATUS.good
-    case 'CONSIDER':
-      return STATUS.warning
-    case 'PASS':
-      return STATUS.critical
-    default:
-      return CHART.axis
-  }
+  if (score == null) return UNSCORED
+  if (score >= 7) return VERDICT.INVEST
+  if (score >= 5) return VERDICT.CONSIDER
+  return VERDICT.PASS
 }

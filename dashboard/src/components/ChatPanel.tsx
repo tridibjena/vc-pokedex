@@ -126,19 +126,15 @@ export default function ChatPanel() {
   }
 
   return (
-    <div className="chat-tab-container">
-      <div className="chat-panel glass-card">
-        <div className="chat-history" ref={chatHistoryRef}>
+    <div className="chat-layout">
+      <section className="comic-card chat-panel">
+        <div className="chat-history" ref={chatHistoryRef} aria-live="polite">
           {messages.length === 0 && (
-            <div style={{ margin: 'auto', textAlign: 'center', color: 'var(--text-muted)' }}>
-              <MessageSquare size={48} style={{ marginBottom: '12px', opacity: 0.3 }} />
-              <p>Ask a question about your VC documents,</p>
-              <p style={{ fontSize: '0.85rem', marginTop: '4px' }}>
-                e.g. "What is the ARR growth of Startup X?"
-              </p>
-              <p style={{ fontSize: '0.8rem', marginTop: '10px', opacity: 0.7 }}>
-                Upload your own under <strong>Sources</strong> →
-              </p>
+            <div className="chat-empty">
+              <MessageSquare size={40} strokeWidth={2} aria-hidden="true" />
+              <p className="empty-title">Ask the Dex anything</p>
+              <p>e.g. “What did Ramp raise, and who led it?”</p>
+              <p className="chat-empty-hint">Add your own term sheets and decks under <strong>Sources</strong> →</p>
             </div>
           )}
 
@@ -150,14 +146,15 @@ export default function ChatPanel() {
               streaming && index === messages.length - 1 && msg.role === 'assistant' && !msg.content
 
             return (
-              <div key={index} className={`chat-message ${msg.role}`}>
+              <div key={index} className={`bubble bubble-${msg.role}`}>
+                <span className="bubble-who">{msg.role === 'user' ? 'You' : 'Analyst'}</span>
                 {awaitingFirstToken ? (
-                  <div className="loading-spinner" />
+                  <span className="spinner spinner-sm" />
                 ) : (
                   <div className="md" dangerouslySetInnerHTML={{ __html: renderMarkdown(msg.content) }} />
                 )}
                 {msg.deal_analysis && (
-                  <div style={{ marginTop: '12px', padding: '10px', background: 'rgba(0,0,0,0.2)', borderRadius: '4px', fontSize: '0.8rem' }}>
+                  <div className="bubble-note">
                     <strong>Scorecard:</strong> {msg.deal_analysis.scorecard?.recommendation} (
                     {msg.deal_analysis.scorecard?.overall_score}/10)
                   </div>
@@ -169,52 +166,51 @@ export default function ChatPanel() {
           {/* Between clicking Send and the response arriving there is no
               assistant bubble yet, so this covers that window only. */}
           {streaming && messages[messages.length - 1]?.role === 'user' && (
-            <div className="chat-message assistant">
-              <div className="loading-spinner" />
+            <div className="bubble bubble-assistant">
+              <span className="bubble-who">Analyst</span>
+              <span className="spinner spinner-sm" />
             </div>
           )}
         </div>
 
-        <form onSubmit={sendQuery} className="chat-input-area">
+        <form onSubmit={sendQuery} className="chat-input-row">
           <input
             type="text"
-            className="chat-input"
+            className="input chat-input"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder={
-              scope.fileId ? `Ask about ${scope.label}...` : 'Type your diligence query...'
-            }
+            placeholder={scope.fileId ? `Ask about ${scope.label}…` : 'Type your diligence question…'}
+            aria-label="Your question"
             disabled={streaming}
           />
-          <button type="submit" className="chat-send-btn" disabled={streaming || !query.trim()}>
-            <Send size={18} />
+          <button type="submit" className="btn btn-pink" disabled={streaming || !query.trim()}>
+            <Send size={15} />
             Send
           </button>
         </form>
-      </div>
+      </section>
 
-      <div className="activity-feed-panel glass-card">
-        <div className="rail-tabs">
+      <aside className="comic-card chat-rail">
+        <div className="rail-tabs" role="tablist">
           <button
-            className={`rail-tab ${rail === 'sources' ? 'active' : ''}`}
+            role="tab"
+            aria-selected={rail === 'sources'}
+            className="rail-tab"
             onClick={() => setRail('sources')}
           >
             <Library size={14} />
             Sources
           </button>
           <button
-            className={`rail-tab ${rail === 'activity' ? 'active' : ''}`}
+            role="tab"
+            aria-selected={rail === 'activity'}
+            className="rail-tab"
             onClick={() => setRail('activity')}
           >
             <Cpu size={14} />
             Activity
           </button>
-          <button
-            onClick={clearHistory}
-            className="rail-tab-action"
-            title="Clear conversation"
-            aria-label="Clear conversation"
-          >
+          <button onClick={clearHistory} className="btn btn-sm btn-icon rail-clear" title="Clear conversation" aria-label="Clear conversation">
             <Trash2 size={13} />
           </button>
         </div>
@@ -222,28 +218,24 @@ export default function ChatPanel() {
         {rail === 'sources' ? (
           <SourcesPanel scope={scope} setScope={setScope} />
         ) : (
-          <div className="activity-list">
+          <ol className="activity-list">
             {currentNode && (
-              <div className="activity-item active">
-                <strong>Running:</strong> {currentNode}...
-                <div className="loading-spinner" style={{ width: '12px', height: '12px', borderWidth: '2px', marginTop: '8px' }} />
-              </div>
+              <li className="activity-item is-active">
+                <span className="spinner spinner-sm" />
+                <span><strong>Running:</strong> {currentNode}…</span>
+              </li>
             )}
 
             {steps.map((step, idx) => (
-              <div key={idx} className="activity-item">
+              <li key={idx} className="activity-item">
                 {step}
-              </div>
+              </li>
             ))}
 
-            {!currentNode && steps.length === 0 && (
-              <div style={{ margin: 'auto', color: 'var(--text-muted)', fontSize: '0.85rem', textAlign: 'center' }}>
-                No active tasks.
-              </div>
-            )}
-          </div>
+            {!currentNode && steps.length === 0 && <li className="activity-empty">No active tasks.</li>}
+          </ol>
         )}
-      </div>
+      </aside>
     </div>
   )
 }

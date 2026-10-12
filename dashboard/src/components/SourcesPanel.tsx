@@ -116,7 +116,7 @@ export default function SourcesPanel({ scope, setScope }: Props) {
           style={{ display: 'none' }}
           onChange={(e) => upload(e.target.files)}
         />
-        <button className="sources-upload-btn" onClick={() => inputRef.current?.click()}>
+        <button className="btn btn-pink sources-upload-btn" onClick={() => inputRef.current?.click()}>
           <Upload size={14} />
           Add VC documents
         </button>
@@ -132,9 +132,10 @@ export default function SourcesPanel({ scope, setScope }: Props) {
         </div>
       )}
 
-      <label className="sources-label">Chat scope</label>
+      <label className="sources-label" htmlFor="chat-scope">Chat scope</label>
       <select
-        className="sources-select"
+        id="chat-scope"
+        className="input sources-select"
         value={scope.fileId ?? ''}
         onChange={(e) => {
           const id = e.target.value
@@ -174,7 +175,7 @@ export default function SourcesPanel({ scope, setScope }: Props) {
       <div className="sources-list">
         {uploading.map((name) => (
           <div className="source-item" key={`up-${name}`}>
-            <span className="loading-spinner" style={{ width: 12, height: 12, borderWidth: 2 }} />
+            <span className="spinner spinner-sm" />
             <span className="source-name">{name}</span>
             <span className="source-meta">uploading</span>
           </div>

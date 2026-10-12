@@ -1,29 +1,20 @@
 import { useEffect, useState } from 'react'
 import {
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-  BarChart,
   Bar,
-  LineChart,
-  Line,
+  BarChart,
   CartesianGrid,
+  LabelList,
+  Line,
+  LineChart,
+  ResponsiveContainer,
+  Tooltip,
   XAxis,
   YAxis,
-  Tooltip,
-  Legend,
 } from 'recharts'
-import { Layers, FileText, PieChart as PieIcon, TrendingUp } from 'lucide-react'
+import { ArrowRight } from 'lucide-react'
 import { api } from '../api'
-import {
-  CHART,
-  SERIES,
-  foldToCap,
-  tooltipItemStyle,
-  tooltipLabelStyle,
-  tooltipStyle,
-} from '../theme'
+import { shortSector } from '../dex'
+import { CHART, INK, PINK, tooltipItemStyle, tooltipLabelStyle, tooltipStyle } from '../theme'
 
 interface Trends {
   sector_distribution: Record<string, number>
@@ -33,7 +24,10 @@ interface Trends {
 
 const STAGE_ORDER = ['pre-seed', 'seed', 'series-a', 'series-b', 'growth']
 
-export default function DashboardPanel() {
+const AXIS = { stroke: CHART.axis, fontSize: 11, tickLine: false, axisLine: false } as const
+const TICK = { fill: INK, fontSize: 11, fontWeight: 700, fontFamily: 'var(--mono-face)' }
+
+export default function DashboardPanel({ onOpenDex }: { onOpenDex: () => void }) {
   const [trends, setTrends] = useState<Trends>({
     sector_distribution: {},
     stage_distribution: {},
@@ -48,7 +42,7 @@ export default function DashboardPanel() {
         const [trendsRes, dealsRes, docsRes, reportsRes] = await Promise.all([
           api.get('/reports/trends'),
           api.get('/reports/deals?limit=1'),
-          api.get('/ingest/documents'),
+          api.get('/research/documents'),
           api.get('/reports/list'),
         ])
         setTrends(trendsRes.data)
@@ -68,20 +62,25 @@ export default function DashboardPanel() {
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
-        <div className="loading-spinner" />
+      <div className="panel-loading panel-loading-tall">
+        <span className="spinner" />
       </div>
     )
   }
 
-  // Every slice is on screen at once, so this is an all-pairs comparison —
-  // fold past the validated cap into a neutral "Other" rather than inventing hues.
-  const sectorData = foldToCap(
-    Object.entries(trends.sector_distribution).map(([name, value]) => ({ name, value })),
-  )
+  // Sectors as a ranked bar chart rather than a donut: many categories read
+  // far better as lengths along one axis, and one colour suffices because the
+  // axis labels carry identity. Normalised so legacy free-text sectors merge.
+  const sectorTotals = new Map<string, number>()
+  for (const [name, value] of Object.entries(trends.sector_distribution)) {
+    const key = shortSector(name)
+    sectorTotals.set(key, (sectorTotals.get(key) ?? 0) + value)
+  }
+  const sectorData = [...sectorTotals.entries()]
+    .map(([name, value]) => ({ name, value }))
+    .sort((a, b) => b.value - a.value)
+    .slice(0, 10)
 
-  // Single series across labelled categories: the axis carries identity, so one
-  // colour. Painting each bar a different hue is a rainbow, not an encoding.
   const stageData = Object.entries(trends.stage_distribution)
     .map(([name, value]) => ({ name, value }))
     .sort((a, b) => {
@@ -91,153 +90,98 @@ export default function DashboardPanel() {
     })
 
   const metrics = [
-    { label: 'Deals Screened', value: stats.dealsCount, Icon: Layers, color: SERIES[0] },
-    { label: 'Ingested Files', value: stats.docsCount, Icon: FileText, color: SERIES[1] },
-    { label: 'Investment Memos', value: stats.memosCount, Icon: TrendingUp, color: SERIES[3] },
+    { label: 'Deals screened', value: stats.dealsCount, tone: 'pop' },
+    { label: 'Dex entries', value: stats.docsCount, tone: 'cyan' },
+    { label: 'Memos written', value: stats.memosCount, tone: 'pink' },
   ]
 
   const steps = [
-    <>Type a startup's name in <strong>The Dex</strong> — no upload, no data entry.</>,
-    <>The agents research it on the web, retrieve comparable deals, and screen for risk in parallel.</>,
-    <>Open <strong>The Dex</strong> for the scorecard, or <strong>Investment Memos</strong> for the write-up.</>,
-    <>Use <strong>RAG Chat</strong> to interrogate any entry — or upload your own documents under <strong>Sources</strong>.</>,
+    <>Type a startup's name into the search bar on <strong>The Dex</strong>. No upload, no data entry.</>,
+    <>Six agents research it, benchmark it against 232 SEC filings and screen for risk, in parallel.</>,
+    <>It lands as a pin at its HQ, with a scorecard, a bull and bear case, and a full memo.</>,
+    <>Interrogate any entry in <strong>RAG Chat</strong>, or add your own term sheets and decks under Sources.</>,
   ]
 
   return (
-    <div>
-      <div className="metrics-container">
-        {metrics.map(({ label, value, Icon, color }) => (
-          <div className="metric-box" key={label}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span className="metric-label">{label}</span>
-              <Icon size={16} color={color} />
-            </div>
-            <span className="metric-value">{value}</span>
+    <div className="dash">
+      <div className="stat-row">
+        {metrics.map(({ label, value, tone }) => (
+          <div className={`stat-tile stat-${tone}`} key={label}>
+            <span className="stat-value">{value ?? 0}</span>
+            <span className="stat-label">{label}</span>
           </div>
         ))}
       </div>
 
-      <div className="dashboard-grid">
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', minWidth: 0 }}>
-          <div className="chart-section">
-            <ChartCard
-              title="Industry Sectors"
-              icon={<PieIcon size={14} />}
-              empty={sectorData.length === 0}
-              emptyLabel="No deal data yet."
-            >
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={sectorData}
-                    cx="50%"
-                    cy="46%"
-                    innerRadius={52}
-                    outerRadius={76}
-                    paddingAngle={2}
-                    dataKey="value"
-                    stroke={CHART.surface}
-                    strokeWidth={2}
-                    isAnimationActive={false}
-                  >
-                    {sectorData.map((entry) => (
-                      <Cell key={entry.name} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip contentStyle={tooltipStyle} itemStyle={tooltipItemStyle} labelStyle={tooltipLabelStyle} />
-                  <Legend verticalAlign="bottom" height={30} iconType="circle" iconSize={8} />
-                </PieChart>
-              </ResponsiveContainer>
-            </ChartCard>
+      <div className="dash-grid">
+        <ChartCard title="Sectors" empty={sectorData.length === 0} height={Math.max(220, sectorData.length * 34 + 40)}>
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={sectorData} layout="vertical" margin={{ top: 4, right: 36, left: 8, bottom: 4 }} barCategoryGap={6}>
+              <CartesianGrid stroke={CHART.grid} horizontal={false} strokeDasharray="3 3" />
+              <XAxis type="number" {...AXIS} allowDecimals={false} tick={TICK} />
+              <YAxis type="category" dataKey="name" {...AXIS} width={92} tick={TICK} />
+              <Tooltip cursor={{ fill: 'rgba(22,23,19,0.06)' }} contentStyle={tooltipStyle} itemStyle={tooltipItemStyle} labelStyle={tooltipLabelStyle} />
+              <Bar dataKey="value" name="Deals" fill={CHART.series} stroke={CHART.seriesStroke} strokeWidth={2} maxBarSize={24} isAnimationActive={false}>
+                <LabelList dataKey="value" position="right" style={{ fill: INK, fontSize: 12, fontWeight: 900, fontFamily: 'var(--mono-face)' }} />
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </ChartCard>
 
-            <ChartCard
-              title="Deal Stages"
-              icon={<Layers size={14} />}
-              empty={stageData.length === 0}
-              emptyLabel="No stage data yet."
-            >
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={stageData} margin={{ top: 8, right: 8, left: -18, bottom: 0 }}>
-                  <CartesianGrid stroke={CHART.grid} vertical={false} />
-                  <XAxis dataKey="name" stroke={CHART.axis} fontSize={11} tickLine={false} axisLine={false} />
-                  <YAxis stroke={CHART.axis} fontSize={11} tickLine={false} axisLine={false} allowDecimals={false} />
-                  <Tooltip
-                    cursor={{ fill: 'rgba(255,255,255,0.04)' }}
-                    contentStyle={tooltipStyle}
-                    itemStyle={tooltipItemStyle}
-                    labelStyle={tooltipLabelStyle}
-                  />
-                  <Bar dataKey="value" name="Deals" fill={SERIES[0]} radius={[4, 4, 0, 0]} maxBarSize={44} isAnimationActive={false} />
-                </BarChart>
-              </ResponsiveContainer>
-            </ChartCard>
-          </div>
+        <ChartCard title="Stages" empty={stageData.length === 0} height={300}>
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={stageData} margin={{ top: 20, right: 8, left: -18, bottom: 0 }}>
+              <CartesianGrid stroke={CHART.grid} vertical={false} strokeDasharray="3 3" />
+              <XAxis dataKey="name" {...AXIS} tick={TICK} />
+              <YAxis {...AXIS} allowDecimals={false} tick={TICK} />
+              <Tooltip cursor={{ fill: 'rgba(22,23,19,0.06)' }} contentStyle={tooltipStyle} itemStyle={tooltipItemStyle} labelStyle={tooltipLabelStyle} />
+              <Bar dataKey="value" name="Deals" fill={CHART.series} stroke={CHART.seriesStroke} strokeWidth={2} maxBarSize={48} isAnimationActive={false}>
+                <LabelList dataKey="value" position="top" style={{ fill: INK, fontSize: 12, fontWeight: 900, fontFamily: 'var(--mono-face)' }} />
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </ChartCard>
 
-          <ChartCard
-            title="Deal Flow Timeline"
-            icon={<TrendingUp size={14} />}
-            height={260}
-            empty={trends.monthly_deal_counts.length === 0}
-            emptyLabel="No timeline data yet."
-          >
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={trends.monthly_deal_counts} margin={{ top: 8, right: 12, left: -18, bottom: 0 }}>
-                <CartesianGrid stroke={CHART.grid} vertical={false} />
-                <XAxis dataKey="date" stroke={CHART.axis} fontSize={11} tickLine={false} axisLine={false} />
-                <YAxis stroke={CHART.axis} fontSize={11} tickLine={false} axisLine={false} allowDecimals={false} />
-                <Tooltip contentStyle={tooltipStyle} itemStyle={tooltipItemStyle} labelStyle={tooltipLabelStyle} />
-                <Line
-                  type="monotone"
-                  dataKey="count"
-                  name="Deals"
-                  stroke={SERIES[0]}
-                  strokeWidth={2}
-                  dot={{ r: 3, fill: SERIES[0], strokeWidth: 0 }}
-                  activeDot={{ r: 5, stroke: CHART.surface, strokeWidth: 2 }}
-                  isAnimationActive={false}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </ChartCard>
-        </div>
+        <ChartCard title="Deals by month" empty={trends.monthly_deal_counts.length === 0} height={280}>
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={trends.monthly_deal_counts} margin={{ top: 12, right: 16, left: -18, bottom: 0 }}>
+              <CartesianGrid stroke={CHART.grid} vertical={false} strokeDasharray="3 3" />
+              <XAxis dataKey="date" {...AXIS} tick={TICK} />
+              <YAxis {...AXIS} allowDecimals={false} tick={TICK} />
+              <Tooltip
+                cursor={{ stroke: INK, strokeWidth: 1, strokeDasharray: '4 3' }}
+                contentStyle={tooltipStyle}
+                itemStyle={tooltipItemStyle}
+                labelStyle={tooltipLabelStyle}
+              />
+              <Line
+                type="linear"
+                dataKey="count"
+                name="Deals"
+                stroke={INK}
+                strokeWidth={2.5}
+                dot={{ r: 5, fill: PINK, stroke: INK, strokeWidth: 2 }}
+                activeDot={{ r: 7, fill: PINK, stroke: INK, strokeWidth: 2 }}
+                isAnimationActive={false}
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        </ChartCard>
 
-        <div className="glass-card" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          <h3
-            style={{
-              fontSize: '0.73rem',
-              textTransform: 'uppercase',
-              letterSpacing: '0.08em',
-              color: 'var(--text-secondary)',
-              fontWeight: 600,
-            }}
-          >
-            Getting Started
-          </h3>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', fontSize: '0.85rem' }}>
+        <section className="comic-card how-card">
+          <h3 className="section-title">How it works</h3>
+          <ol className="steps">
             {steps.map((text, i) => (
-              <div style={{ display: 'flex', gap: '11px' }} key={i}>
-                <span
-                  style={{
-                    fontFamily: 'var(--font-mono)',
-                    fontSize: '0.7rem',
-                    color: SERIES[0],
-                    border: '1px solid rgba(131,21,249,0.35)',
-                    borderRadius: '5px',
-                    width: '20px',
-                    height: '20px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    flexShrink: 0,
-                  }}
-                >
-                  {i + 1}
-                </span>
-                <span style={{ color: 'var(--text-secondary)', lineHeight: 1.6 }}>{text}</span>
-              </div>
+              <li key={i}>
+                <span className="step-num">{i + 1}</span>
+                <span>{text}</span>
+              </li>
             ))}
-          </div>
-        </div>
+          </ol>
+          <button type="button" className="btn btn-pink" onClick={onOpenDex}>
+            Open the map <ArrowRight size={15} />
+          </button>
+        </section>
       </div>
     </div>
   )
@@ -245,54 +189,21 @@ export default function DashboardPanel() {
 
 function ChartCard({
   title,
-  icon,
   children,
   empty,
-  emptyLabel,
-  height = 300,
+  height,
 }: {
   title: string
-  icon: React.ReactNode
   children: React.ReactNode
   empty?: boolean
-  emptyLabel?: string
-  height?: number
+  height: number
 }) {
   return (
-    <div className="glass-card" style={{ height, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-      <h3
-        style={{
-          marginBottom: '14px',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '7px',
-          fontSize: '0.73rem',
-          textTransform: 'uppercase',
-          letterSpacing: '0.08em',
-          color: 'var(--text-secondary)',
-          fontWeight: 600,
-        }}
-      >
-        {icon} {title}
-      </h3>
-      <div style={{ flex: 1, minHeight: 0 }}>
-        {empty ? (
-          <div
-            style={{
-              height: '100%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: 'var(--text-muted)',
-              fontSize: '0.85rem',
-            }}
-          >
-            {emptyLabel}
-          </div>
-        ) : (
-          children
-        )}
+    <section className="comic-card chart-card">
+      <h3 className="section-title">{title}</h3>
+      <div style={{ height }} className="chart-body">
+        {empty ? <div className="chart-empty">Nothing screened yet — scan a startup to fill this in.</div> : children}
       </div>
-    </div>
+    </section>
   )
 }

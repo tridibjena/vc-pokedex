@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { Radio } from 'lucide-react'
 import { api } from '../api'
-import { typeColor } from '../dex'
+import { shortSector } from '../dex'
+import { formatUsd } from '../format'
 
 interface Raise {
   company: string
@@ -16,14 +17,7 @@ interface Raise {
 
 const REFRESH_MS = 15 * 60 * 1000
 
-export function formatUsd(n: number | null | undefined): string | null {
-  if (n == null || !isFinite(n)) return null
-  if (n >= 1e9) return `$${(n / 1e9).toFixed(n >= 1e10 ? 0 : 1).replace(/\.0$/, '')}B`
-  if (n >= 1e6) return `$${(n / 1e6).toFixed(n >= 1e8 ? 0 : 1).replace(/\.0$/, '')}M`
-  if (n >= 1e3) return `$${Math.round(n / 1e3)}K`
-  return `$${n}`
-}
-
+/** The funding wire — a strip of tape across the top of every page. */
 export default function Ticker() {
   const [raises, setRaises] = useState<Raise[]>([])
   const [loading, setLoading] = useState(true)
@@ -48,27 +42,20 @@ export default function Ticker() {
     }
   }, [])
 
-  if (loading) {
-    return (
-      <div className="ticker">
-        <div className="ticker-label">
-          <Radio size={11} /> WIRE
-        </div>
-        <div className="ticker-viewport">
-          <span className="ticker-empty">Scanning global funding wire…</span>
-        </div>
-      </div>
-    )
-  }
+  const label = (
+    <div className="ticker-label">
+      <Radio size={12} strokeWidth={2.5} /> Wire
+    </div>
+  )
 
-  if (raises.length === 0) {
+  if (loading || raises.length === 0) {
     return (
       <div className="ticker">
-        <div className="ticker-label">
-          <Radio size={11} /> WIRE
-        </div>
+        {label}
         <div className="ticker-viewport">
-          <span className="ticker-empty">No recent raises on the wire. Set TAVILY_API_KEY to enable.</span>
+          <span className="ticker-empty">
+            {loading ? 'Tuning in to the global funding wire…' : 'No recent raises on the wire. Set TAVILY_API_KEY to enable.'}
+          </span>
         </div>
       </div>
     )
@@ -79,13 +66,11 @@ export default function Ticker() {
 
   return (
     <div className="ticker">
-      <div className="ticker-label">
-        <Radio size={11} /> WIRE
-      </div>
+      {label}
       <div className="ticker-viewport">
-        <div className="ticker-lane" style={{ animationDuration: `${Math.max(30, raises.length * 7)}s` }}>
+        <div className="ticker-lane" style={{ animationDuration: `${Math.max(36, raises.length * 8)}s` }}>
           {lane.map((r, i) => (
-            <TickerItem key={`${r.company}-${i}`} raise={r} />
+            <TickerItem key={`${r.company}-${i}`} raise={r} hidden={i >= raises.length} />
           ))}
         </div>
       </div>
@@ -93,27 +78,31 @@ export default function Ticker() {
   )
 }
 
-function TickerItem({ raise: r }: { raise: Raise }) {
+function TickerItem({ raise: r, hidden }: { raise: Raise; hidden: boolean }) {
   const amount = formatUsd(r.amount_usd)
   const valuation = formatUsd(r.valuation_usd)
-  const accent = typeColor(r.sector)
 
   const body = (
     <>
-      <i className="ticker-dot" style={{ background: accent }} />
       <span className="ticker-company">{r.company}</span>
       {r.round && <span className="ticker-round">{r.round}</span>}
       {amount && <span className="ticker-amount">{amount}</span>}
       {valuation && <span className="ticker-val">@ {valuation}</span>}
+      {r.sector && <span className="ticker-sector">{shortSector(r.sector)}</span>}
       {r.country && <span className="ticker-country">{r.country}</span>}
+      <span className="ticker-star" aria-hidden="true">✦</span>
     </>
   )
 
+  // The second copy exists only for the seamless loop; keep it out of the
+  // accessibility tree and the tab order.
+  const a11y = hidden ? { 'aria-hidden': true, tabIndex: -1 } : {}
+
   return r.url ? (
-    <a className="ticker-item" href={r.url} target="_blank" rel="noopener noreferrer" title={r.headline || r.company}>
+    <a className="ticker-item" href={r.url} target="_blank" rel="noopener noreferrer" title={r.headline || r.company} {...a11y}>
       {body}
     </a>
   ) : (
-    <span className="ticker-item">{body}</span>
+    <span className="ticker-item" {...a11y}>{body}</span>
   )
 }
